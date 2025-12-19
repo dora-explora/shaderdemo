@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <stdlib.h>
 
 int main(void) {
     const int screenWidth = 1920;
@@ -9,6 +10,7 @@ int main(void) {
     Shader shader = LoadShader(0, "./shader.fs");
     
     int timeLoc = GetShaderLocation(shader, "time");
+    int seedLoc = GetShaderLocation(shader, "seed");
     float time = 0;
     float screenSize[2] = { (float) GetScreenWidth(), (float) GetScreenHeight() };
     SetShaderValue(shader, GetShaderLocation(shader, "size"), &screenSize, SHADER_UNIFORM_VEC2);
@@ -21,6 +23,8 @@ int main(void) {
     {
         time += GetFrameTime();
         SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
+        float seed = (float) rand() / RAND_MAX;
+        SetShaderValue(shader, seedLoc, &seed, SHADER_UNIFORM_FLOAT);
         // TODO: Update your variables here
         
         BeginDrawing();
