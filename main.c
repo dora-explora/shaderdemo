@@ -7,18 +7,20 @@ int main(void) {
     InitWindow(screenWidth, screenHeight, "Shader Demo");
 
     Shader shader = LoadShader(0, "./shader.fs");
+    
+    int timeLoc = GetShaderLocation(shader, "time");
+    float time = 0;
     float screenSize[2] = { (float) GetScreenWidth(), (float) GetScreenHeight() };
     SetShaderValue(shader, GetShaderLocation(shader, "size"), &screenSize, SHADER_UNIFORM_VEC2);
 
-    // make sure to add the background, middle, and foreground textures (once drawn/given placeholders)
-    Image imBlank = GenImageColor(screenWidth, screenHeight, BLANK);
-    Texture2D blankTexture = LoadTextureFromImage(imBlank);
-    UnloadImage(imBlank);
+    Texture2D bgTexture = LoadTexture("assets/rainworld.jpg");
 
     SetTargetFPS(60);
 
     while (!WindowShouldClose())
     {
+        time += GetFrameTime();
+        SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
         // TODO: Update your variables here
         
         BeginDrawing();
@@ -26,7 +28,7 @@ int main(void) {
         ClearBackground(RAYWHITE);
 
         BeginShaderMode(shader);
-        DrawTexture(blankTexture, 0, 0, WHITE);
+        DrawTexture(bgTexture, 0, 0, WHITE);
         EndShaderMode();
                     
         DrawFPS(10, 10);
@@ -34,7 +36,7 @@ int main(void) {
     }
 
     UnloadShader(shader);
-    UnloadTexture(blankTexture);
+    UnloadTexture(bgTexture);
 
     CloseWindow();
     return 0;
