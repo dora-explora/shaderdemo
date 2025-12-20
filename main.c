@@ -29,7 +29,6 @@ int main(void) {
         SetShaderValue(shader, frameLoc, &frame, SHADER_UNIFORM_INT);
         float seed = (float) rand() / RAND_MAX;
         SetShaderValue(shader, seedLoc, &seed, SHADER_UNIFORM_FLOAT);
-        // TODO: Update your variables here
         
         BeginDrawing();
         
