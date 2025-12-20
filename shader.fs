@@ -3,76 +3,73 @@
 in vec2 fragTexCoord;
 in vec4 fragColor;
 
-out vec4 finalColor;
+out vec4 color;
 
 uniform vec2 size;
 uniform float time;
 uniform float seed;
+uniform int frame;
 
-uniform sampler2D texture0;
+uniform sampler2D bg;
 
-float random (in float seed) {
+float rand (in float seed) {
     seed = fract(seed * .1031);
     seed *= seed + 33.33;
     seed *= seed + seed;
     return fract(seed);
 }
 
-bool brandom (in float seed) {
-    if (random(seed) < 0.5) {
+bool brand (in float seed) {
+    if (rand(seed) < 0.5) {
         return true;
     } else {
         return false;
     }
 }
 
-const float SHAKE_STRENGTH = 50.;
-const float RAIN_STRENGTH = 30.;
-const float RAIN_CHANCE = 0.06;
-const float RAIN_WIDTH = 0.005;
+const float SHAKE_STRENGTH = .006;
+const float RAIN_STRENGTH = .03;
+const float RAIN_CHANCE = 0.0006;
+const float RAIN_LENGTH = 0.05;
+const float RAIN_SPEED = 20.;
 
-bool rainchancerand(in float x, in float seed) { // random chance for rain
-    if (random(x * 123.456789 + seed) < RAIN_CHANCE) {
+bool rainrand(in float x, in float seed) { // random chance for rain
+    if (rand(x * 1920. + seed) < RAIN_CHANCE) {
         return true;
     } else {
         return false;
     }
 }
 
-float rainstrengthrand(in float x, in float seed) { // random strength for rain
-    return random(x * 83.4628734 + seed) / RAIN_STRENGTH;
+vec2 shakerand(in float seed) {
+    vec2 shake;
+    shake.y = rand(seed + 1.) * SHAKE_STRENGTH * (brand(seed + 1.) ? -1. : 1.);
+    shake.x = rand(seed) * SHAKE_STRENGTH * (brand(seed) ? -1. : 1.);
+    return shake;
 }
 
-float rainrand(in float x, in float seed) {
-    for (float i = 0.; i < RAIN_WIDTH; i+= 1/size.x) {
-        if (rainchancerand(x + i, seed)) {
-            return rainstrengthrand(x + i, seed) * ((RAIN_WIDTH - i) / RAIN_WIDTH);
-        } else if (rainchancerand(x - i, seed)) {
-            return rainstrengthrand(x - i, seed) * ((RAIN_WIDTH - i) / RAIN_WIDTH);
+float rain(in vec2 pos, in int frame, in float height) {
+    for (float i = 0; i < RAIN_LENGTH; i += 1 / height) {
+        if (rainrand(pos.x, frame * RAIN_SPEED / height - pos.y - i)) {
+            return (RAIN_LENGTH - i) / RAIN_LENGTH;
         }
     }
     return 0.;
 }
 
-vec2 shakerand(in float seed) {
-    vec2 shake;
-    shake.x = random(seed) / SHAKE_STRENGTH * (brandom(seed) ? -1. : 1.);
-    shake.y = random(seed + 1.) / SHAKE_STRENGTH * (brandom(seed + 1.) ? -1. : 1.);
-    return shake;
-}
-
 void main() {
     vec2 pos = fragTexCoord;
-    
-    pos.y -= rainrand(pos.x, seed); // rain
-    pos += shakerand(seed); // screen shake
 
-    if (pos.y > 1. || pos.y < 0.) { // if pos.y is offscreen,
-        finalColor = vec4(0., 0., 0., 1.); // make the color black
-        return;
-    }
+    float rain_strength = rain(pos, frame, size.y);
     
-    vec4 rawColor = texture(texture0, pos);
+    // pos += shakerand(seed); // screen shake
+    // if (pos.y > 1. || pos.y < 0.) { // if pos.y is offscreen,
+    //     color = vec4(0., 0., 0., 1.); // make the color black
+    //     return;
+    // }
 
-    finalColor = rawColor;
+
+    color = texture(bg, pos);
+
+    color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
 }
