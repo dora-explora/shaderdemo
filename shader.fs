@@ -51,7 +51,12 @@ int floorheight(in float x) {
     return 1000;
 }
 
+float floorangle(in float x) {
+    return x * 90.;
+}
+
 bool rainrand(in float x, in int seed) { // random chance for rain
+    x = round(x * 1920.) / 1920.;
     if (sinrand(rand(sinrand(x + float(seed) * 0.76521)) + 0.5) < RAIN_CHANCE) { // this took me so god damn long
         return true;
     } else {
@@ -72,11 +77,14 @@ float rain(in vec2 pos, in int frame) {
     if (height - int(pos.y * 1080.) < SPLATTER_LENGTH) {
         for (int i = 0; i < SPLATTER_LENGTH; i++) {
             int depth = height * 2 - int(pos.y * 1080.) - i;
-            int seed = ((frame - SPLATTER_LENGTH) * RAIN_SPEED - depth * 5) % 1000;
+            int seed = ((frame - SPLATTER_LENGTH) * RAIN_SPEED - depth) % 1000;
             float offset = float(depth - height)/1920. + float(i)/1920.;
-            float angled = tan(radians(45));
-            if (rainrand(pos.x + offset * angled, seed) || rainrand(pos.x - offset * angled, seed)) {
-                return float(i) / SPLATTER_LENGTH;
+            float angle = floorangle(pos.x);
+            float rotation = tan(radians(angle));
+            rotation = clamp(rotation, 1./5., 5.);
+            if (rainrand(pos.x + offset / rotation, seed) || rainrand(pos.x - offset * rotation, seed)) {
+                // return float(i) / SPLATTER_LENGTH;
+                return 0.5;
             }
         }
     }
