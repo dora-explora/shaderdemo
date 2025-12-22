@@ -2,10 +2,7 @@
 #include <stdlib.h>
 
 int main(void) {
-    const int screenWidth = 1920;
-    const int screenHeight = 1080;
-
-    InitWindow(screenWidth, screenHeight, "Shader Demo");
+    InitWindow(1920, 1080, "Shader Demo");
 
     Shader shader = LoadShader(0, "./shader.fs");
     
@@ -14,10 +11,8 @@ int main(void) {
     int seedLoc = GetShaderLocation(shader, "seed");
     int frameLoc = GetShaderLocation(shader, "frame");
     int frame = 0;
-    float screenSize[2] = { (float) GetScreenWidth(), (float) GetScreenHeight() };
-    SetShaderValue(shader, GetShaderLocation(shader, "size"), &screenSize, SHADER_UNIFORM_VEC2);
 
-    Texture2D bgTexture = LoadTexture("assets/rainworld.jpg");
+    Texture2D bgTexture = LoadTexture("assets/bg.png");
 
     SetTargetFPS(60);
 
@@ -31,8 +26,6 @@ int main(void) {
         SetShaderValue(shader, seedLoc, &seed, SHADER_UNIFORM_FLOAT);
         
         BeginDrawing();
-        
-        ClearBackground(RAYWHITE);
 
         BeginShaderMode(shader);
         DrawTexture(bgTexture, 0, 0, WHITE);
