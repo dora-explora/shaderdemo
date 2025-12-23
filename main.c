@@ -6,11 +6,14 @@ int main(void) {
 
     Shader shader = LoadShader(0, "./shader.fs");
     
-    int timeLoc = GetShaderLocation(shader, "time");
     float time = 0;
+    int timeLoc = GetShaderLocation(shader, "time");
+    float seed;
     int seedLoc = GetShaderLocation(shader, "seed");
-    int frameLoc = GetShaderLocation(shader, "frame");
     int frame = 0;
+    int frameLoc = GetShaderLocation(shader, "frame");
+    Vector2 mouse;
+    int mouseLoc = GetShaderLocation(shader, "mouse");
 
     Texture2D bgTexture = LoadTexture("assets/bg.png");
 
@@ -22,8 +25,10 @@ int main(void) {
         SetShaderValue(shader, timeLoc, &time, SHADER_UNIFORM_FLOAT);
         frame++;
         SetShaderValue(shader, frameLoc, &frame, SHADER_UNIFORM_INT);
-        float seed = (float) rand() / RAND_MAX;
+        seed = (float) rand() / RAND_MAX;
         SetShaderValue(shader, seedLoc, &seed, SHADER_UNIFORM_FLOAT);
+        mouse = GetMousePosition();
+        SetShaderValue(shader, mouseLoc, &mouse, SHADER_UNIFORM_VEC2);
         
         BeginDrawing();
 
