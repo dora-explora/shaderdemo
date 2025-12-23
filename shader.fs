@@ -36,8 +36,7 @@ const float SHAKE_STRENGTH = .006;
 const float RAIN_STRENGTH = .03;
 const float RAIN_CHANCE = 0.003;
 const int RAIN_LENGTH = 20;
-const int SPLATTER_DISTANCE = 10;
-const int SPLATTER_LENGTH = 5;
+const int SPLATTER_DISTANCE = 20;
 const int RAIN_SPEED = 20;
 // const int RAIN_SPEED = 2;
 const float MOUSE_RADIUS = 50.;
@@ -100,20 +99,6 @@ bool rain(in int x, in int y, in int frame) {
     return rainrand(x, seed);
 }
 
-    // if (height - int(pos.y * 1080.) < SPLATTER_LENGTH) {
-    //     for (int i = 0; i < SPLATTER_LENGTH; i++) {
-    //         int depth = height * 2 - int(pos.y * 1080.) - i;
-    //         int seed = ((frame - SPLATTER_LENGTH) * RAIN_SPEED - depth) % 1000;
-    //         float offset = float(depth - height)/1920. + float(i)/1920.;
-    //         float angle = floorangle(pos.x);
-    //         float rotation = tan(radians(angle));
-    //         rotation = clamp(rotation, 1./5., 5.);
-    //         if (rainrand(pos.x + offset / rotation, seed) || rainrand(pos.x - offset * rotation, seed)) {
-    //             // return float(i) / SPLATTER_LENGTH;
-    //             return 0.5;
-    //         }
-    //     }
-    // }
 bool splatter(in ivec2 ipos, in int frame) {
     int bound = SPLATTER_DISTANCE * 3;
     for (int i = -bound; i < bound; i++) {
@@ -154,10 +139,8 @@ float rainstrength(in ivec2 ipos, in int frame) {
             return float(RAIN_LENGTH - i) / RAIN_LENGTH;
         }
     }
-    for (int i = 0; i < SPLATTER_LENGTH; i++) {
-        if (splatter(ipos, frame - i * RAIN_SPEED)) {
-            return float(SPLATTER_DISTANCE - i)/SPLATTER_DISTANCE;
-        }
+    if (splatter(ipos, frame)) {
+        return 1.;
     }
     return 0.;
 }
