@@ -37,9 +37,9 @@ const float RAIN_STRENGTH = .03;
 const float RAIN_CHANCE = 0.003;
 const int RAIN_LENGTH = 20;
 const int SPLATTER_DISTANCE = 20;
+const int SPLATTER_LENGTH = 2;
 const int RAIN_SPEED = 20;
-// const int RAIN_SPEED = 2;
-const float MOUSE_RADIUS = 50.;
+const float MOUSE_RADIUS = 40.;
 
 vec2 shakerand(in float seed) {
     vec2 shake;
@@ -50,25 +50,49 @@ vec2 shakerand(in float seed) {
     return shake;
 }
 
-int floorheight(in int x) {
-    int height = 1000;
+bool moused(in int x) {
     if (x < mouse.x + MOUSE_RADIUS && x > mouse.x - MOUSE_RADIUS) {
-        int offset = x - int(mouse.x);
-        int mouseheight = int(mouse.y + sqrt(MOUSE_RADIUS*MOUSE_RADIUS + offset*offset) - 2 * MOUSE_RADIUS);
-        if (height > mouseheight) { height = mouseheight; }
+        return true;
+    }
+    return false;
+}
+
+int mouseheight(in int x) {
+    int offset = x - int(mouse.x);
+    return int(mouse.y + sqrt(MOUSE_RADIUS*MOUSE_RADIUS + offset*offset) - 2 * MOUSE_RADIUS);
+}
+
+int floorheight(in int x) {
+    int height;
+    if (x < 200) { height = 1000; }
+    else if (x < 800) { 
+        height = 1000 - int(smoothstep(0., 1., float(x - 200)/600.) * 200.); 
+    } else if (x < 1500) { height = 800; }
+    else if (x < 1600) {
+        height = 800 + 2 * (x - 1500);
+    } else { height = 1000; }
+    if (moused(x)) {
+        int mouseheight = mouseheight(x);
+        if (height > mouseheight) { return mouseheight; }
     }
     return height;
 }
 
 float floorangle(in int x) {
-    if (floorheight(x) < 1000) { // optimization since the map is simple
+    if (moused(x) && mouseheight(x) == floorheight(x)) {
         float offset = x - mouse.x;
         return degrees(acos(offset / MOUSE_RADIUS)) - 90.;
     }
-    return 0.;
+    if (x < 200) { return 0.; }
+    else if (x < 800) { 
+        float t = float(x - 200)/600.;
+        return 90. - degrees(atan(1. / (6. * (t - t*t))));
+    } else if (x < 1500) { return 0.; }
+    else if (x < 1600) { return -60.; }
+    else { return 0.; }
 }
 
-bool rainrand(in int x, in int seed) { // random chance for rain
+bool rainrand(in int x, in int seed) { // random chance for rained
     if (sinrand(rand(sinrand(float(x) / 1920. + float(seed) * 0.76521)) + 0.5) < RAIN_CHANCE) { // this took me so god damn long
         return true;
     }
@@ -77,7 +101,7 @@ bool rainrand(in int x, in int seed) { // random chance for rain
 
 ivec2 rainrotation(in int x) {
     float angle = floorangle(x);
-    if (angle < -31.) {
+    if (angle < -30.) {
         return ivec2(1, 4);
     } else if (angle < -24.) {
         return ivec2(1, 3);
@@ -87,16 +111,29 @@ ivec2 rainrotation(in int x) {
         return ivec2(1, 1);
     } else if (angle < 24.) {
         return ivec2(2, 1);
-    } else if (angle < 31.) {
+    } else if (angle < 30.) {
         return ivec2(3, 1);
     } else {
         return ivec2(4, 1);
     }
 }
 
-bool rain(in int x, in int y, in int frame) {
+bool rained(in int x, in int y, in int frame) {
     int seed = int(frame * RAIN_SPEED - y) % 967;
     return rainrand(x, seed);
+}
+
+bool splatterable(in ivec2 ipos) {
+    int height = floorheight(ipos.x);
+    if(ipos.y > height) { return false; }
+    if (
+        ipos.x < mouse.x + MOUSE_RADIUS + SPLATTER_DISTANCE && 
+        ipos.x > mouse.x - MOUSE_RADIUS - SPLATTER_DISTANCE &&
+        ipos.y < mouse.y &&
+        ipos.y > mouse.y - MOUSE_RADIUS - SPLATTER_DISTANCE
+    ) { return true; }
+    if (ipos.y < height && ipos.y > height - SPLATTER_DISTANCE) { return true; }
+    return false;
 }
 
 bool splatter(in ivec2 ipos, in int frame) {
@@ -123,24 +160,30 @@ bool splatter(in ivec2 ipos, in int frame) {
         if (ipos.y + abs(i) * numerator / denominator != height) { continue; } // if not at correct y level, break
 
         int y = height + abs(i) * RAIN_SPEED; // y position of unobscured droplet
-        if (rain(x, y, frame)) {
+        if (rained(x, y, frame)) {
             return true;
         }
     }
     return false;
 }
 
-float rainstrength(in ivec2 ipos, in int frame) {
+float rain(in ivec2 ipos, in int frame) {
     if (ipos.y > floorheight(ipos.x)) {
         return 0.;
     }
+
     for (int i = 0; i < RAIN_LENGTH; i++) {
-        if (rain(ipos.x, ipos.y + i, frame)) {
+        if (rained(ipos.x, ipos.y + i, frame)) {
             return float(RAIN_LENGTH - i) / RAIN_LENGTH;
         }
     }
-    if (splatter(ipos, frame)) {
-        return 1.;
+
+    if (splatterable(ipos)) {
+        for (int i = 0; i < SPLATTER_LENGTH; i++) {
+            if (splatter(ipos, frame - i)) {
+                return float(SPLATTER_LENGTH + 1 - i)/3.;
+            }
+        }
     }
     return 0.;
 }
@@ -169,13 +212,17 @@ void main() {
     if (mouse_strength > 0.) {
         color = mix(color, vec4(0.5, 0.3, 0.3, 1.), mouse_strength);
     } else {
-        float rain_strength = rainstrength(ipos, frame);
+        float rain_strength = rain(ipos, frame);
         color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
     }
 
-    // for floorheight() and floorangle() testing
+    // // for splatterable testing
+    // if (splatterable(ipos)) {
+    //     color = mix(color, vec4(1.), 0.2);
+    // }
+    // // for floorheight() and floorangle() testing
     // if (ipos.y == floorheight(ipos.x)) {
-        // color = vec4(1., 0., 0., 0.);
-        // color = vec4(floorangle(ipos.x) / 90., -floorangle(ipos.x) / 90., 0., 1.);
+    //     // color = vec4(1., 0., 0., 1.);
+    //     color = vec4(floorangle(ipos.x) / 90., -floorangle(ipos.x) / 90., 1., 1.);
     // }
 }
