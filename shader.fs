@@ -46,9 +46,10 @@ const int SPLATTER_DISTANCE = 20;
 const int SPLATTER_LENGTH = 2;
 const int RAIN_SPEED = 20;
 const float MOUSE_RADIUS = 40.;
-const float LIGHTNING_PERIOD = 1000.;
-// const float LIGHTNING_PERIOD = 1.;
-const int LIGHTNING_DECAY = 10;
+const float LIGHTNING_PERIOD = 400.;
+const int LIGHTNING_DECAY = 15;
+const float LIGHTNING_BG_STRENGTH = 0.2;
+const float LIGHTNING_WALK_CHANCE = 0.3;
 
 vec2 shakerand(in float seed) { // random offset of pos for screen shake (outdated, probalby going to remove)
     vec2 shake;
@@ -219,40 +220,40 @@ bool lightrand(in int frame) { // whether or not some frame has lightning
 float lightbg() { // strength of background lightning on this frame
     for (int i = 0; i < LIGHTNING_DECAY; i++) {
         if (lightrand(frame - i)) {
-            return float(LIGHTNING_DECAY - i) / float(10 * LIGHTNING_DECAY);
+            return float(LIGHTNING_DECAY - i) / float(LIGHTNING_DECAY);
         }
     }
     return 0.;
 }
 
-bool lightwalk(in int inp) { // whether or not the lightning flips direction at some y position (??)
-    if (rand(fmod(float(inp), 1022.8942)) < 0.05) {
+bool lightwalk(in float inp) { // whether or not the lightning flips direction at some y position (??)
+    if (rand(inp) < LIGHTNING_WALK_CHANCE) {
         return true;
     } else {
         return false;
     }
 }
 
-float light(in ivec2 ipos, in ivec2 imouse) { // strenght of lightning bolt at a certain pixel this frame
-    if (!lightrand(frame)) { return 0.; }
+bool lightbolt(in ivec2 ipos, in ivec2 imouse) { // strength of lightning bolt at a certain pixel this frame
+    if (!lightrand(frame)) { return false; }
+    if (ipos.y >= imouse.y) { return false; }
     int xoffset = abs(ipos.x - imouse.x);
     int yoffset = abs(ipos.y - imouse.y);
-    if (xoffset * 2 > yoffset || ipos.y >= imouse.y) { return 0.; }
-    int x = int(sinrand(seed) * imouse.y / 2 + imouse.x - imouse.y/4);
-    bool direction = brand(seed);
-    for (int i = 0; i < ipos.y; i += 2) {
-        if (x - imouse.x == (imouse.y - i)/2) {
-            direction = false;
-        } else if (imouse.x - x == (imouse.y - i)/2) {
-            direction = true;
-        } else if (lightwalk(frame + ipos.y - i/2)) { 
-            direction = !direction;
+    if (xoffset > yoffset) { return false; }
+    int x = int(sinrand(seed) * 100 + imouse.x - 50);
+    int direction = 1;
+    for (int y = 0; y < ipos.y; y++) {
+        if (x - imouse.x == imouse.y - y) {
+            direction = -1;
+        } else if (imouse.x - x == imouse.y - y) {
+            direction = 1;
+        } else if (lightwalk(fract(seed + float(y) * 0.827634))) {
+            direction = direction == 1 ? -1 : 1;
         }
-        if (direction) { x++; }
-        else { x--; }
+        x += direction;
     }
-    if (ipos.x != x) { return 0.; }
-    return 1.;
+    if (ipos.x == x) { return true; }
+    else { return false; }
 }
 
 void main() {
@@ -276,8 +277,10 @@ void main() {
     } else {
         float rain_strength = rain(ipos, frame, imouse);
         color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
-        float lightning_strength = lightbg();// + light(ipos, imouse);
-        color = mix(color, vec4(1.), lightning_strength);
+        float lightning_bg_strength = lightbg();
+        color = mix(color, vec4(1.), lightning_bg_strength * LIGHTNING_BG_STRENGTH);
+        float lightning_bolt_strength = lightbolt(ipos, imouse) ? 1. : 0.;
+        color = mix(color, vec4(1., 1., 0.7, 1.), lightning_bolt_strength);
     }
 
     // // for splatterable testing
