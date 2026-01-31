@@ -14,6 +14,10 @@ int main(void) {
     int frameLoc = GetShaderLocation(shader, "frame");
     Vector2 mouse;
     int mouseLoc = GetShaderLocation(shader, "mouse");
+    Texture2D rockTexture = LoadTexture("assets/rock.png");
+    int rockLoc = GetShaderLocation(shader, "rock");
+    Texture2D platformTexture = LoadTexture("assets/platform.png");
+    int platformLoc = GetShaderLocation(shader, "platform");
 
     Texture2D bgTexture = LoadTexture("assets/bg.png");
 
@@ -33,6 +37,8 @@ int main(void) {
         BeginDrawing();
 
         BeginShaderMode(shader);
+        SetShaderValueTexture(shader, rockLoc, rockTexture);
+        SetShaderValueTexture(shader, platformLoc, platformTexture);
         DrawTexture(bgTexture, 0, 0, WHITE);
         EndShaderMode();
 
@@ -42,6 +48,8 @@ int main(void) {
 
     UnloadShader(shader);
     UnloadTexture(bgTexture);
+    UnloadTexture(rockTexture);
+    UnloadTexture(platformTexture);
 
     CloseWindow();
     return 0;

@@ -11,6 +11,8 @@ uniform int frame;
 uniform vec2 mouse;
 
 uniform sampler2D bg;
+uniform sampler2D rock;
+uniform sampler2D platform;
 uniform int heights[1920];
 
 float rand(in float seed) {
@@ -81,9 +83,7 @@ int floorheight(in int x) { // height of the floor at some x position
 
 int platformpos(in int frame) {
     int aframe = frame % 1000; // "actual" frame, adjusted for period
-    if (aframe < 0) {
-        return 1000;
-    } else if (aframe < 200) {
+    if (aframe < 200) {
         return int(12 * sqrt(aframe + 1.)) + 988;
     } else if (aframe < 267) {
         return int(pow(float(aframe - 191), 2.) / 40.) + 1156;
@@ -100,8 +100,8 @@ int platformpos(in int frame) {
 
 int platformheight(in int x, in int frame) {
     int pos = platformpos(frame);
-    if (x < pos + 100 && x > pos - 100) {
-        return 500;
+    if (x < pos + 75 && x > pos - 75) {
+        return 450;
     }
     return 1080;
 }
@@ -237,6 +237,12 @@ float mousestrength(in ivec2 ipos, in ivec2 imouse) { // strength of mouse at a 
     return 0.;
 }
 
+vec4 mousecolor(in ivec2 ipos, in ivec2 imouse) {
+    float x = (ipos.x - imouse.x) / (MOUSE_RADIUS * 2. + 1.) + .5;
+    float y = (ipos.y - imouse.y) / (MOUSE_RADIUS * 2. + 1.) + .5;
+    return texture2D(rock, vec2(x, y));
+}
+
 bool lightrand(in int frame) { // whether or not some frame has lightning
     if (sinrand(fmod(float(frame) / LIGHTNING_PERIOD, LIGHTNING_PERIOD * 5.25714)) < 1./LIGHTNING_PERIOD) {
         return true;
@@ -289,10 +295,38 @@ bool lightbolt(in ivec2 ipos, in ivec2 imouse, in int frame) { // strength of li
 
 float platformstrength(in ivec2 ipos, in int frame) {
     int pos = platformpos(frame);
-    if (ipos.y < 500 && ipos.y > 450 && ipos.x < pos + 100 && ipos.x > pos - 100) {
+    if (ipos.y < 500 && ipos.y > 450 && ipos.x < pos + 75 && ipos.x > pos - 75) {
         return 1.;
     }
     return 0.;
+}
+
+vec4 platformcolor(in ivec2 ipos, in int frame) {
+    int pos = platformpos(frame);
+    if (ipos.y == 476) {
+        if (frame % 500 < 267) {
+            if (ipos.x == pos) {
+                return vec4(0., 1., 0., 1.);
+            }
+            if (ipos.x == pos - 5 && (frame % 1000) / 500 == 1) {
+                return vec4(1., .5, 0., 1.);
+            }
+            if (ipos.x == pos + 5 && (frame % 1000) / 500 == 0) {
+                return vec4(1., .5, 0., 1.);
+            }
+        } else if (frame % 500 > 420) {
+            if (ipos.x == pos) {
+                return vec4(1., 1., 0., 1.);
+            }
+        } else {
+            if (ipos.x == pos) {
+                return vec4(1., 0., 0., 1.);
+            }
+        }
+    }
+    float x = (ipos.x - pos) / 151. + 0.5;
+    float y = (ipos.y - 450) / 51.;
+    return texture(platform, vec2(x, y));
 }
 
 void main() {
@@ -313,9 +347,9 @@ void main() {
     float mouse_strength = mousestrength(ipos, imouse);
     float platform_strength = platformstrength(ipos, frame);
     if (mouse_strength > 0.) {
-        color = mix(color, vec4(0.5, 0.3, 0.3, 1.), mouse_strength);
+        color = mousecolor(ipos, imouse);
     } else if (platform_strength > 0.) {
-        color = mix(color, vec4(0.2, 0.7, 0.6, 1.), platform_strength);
+        color = platformcolor(ipos, frame);
     } else {
         float rain_strength = rain(ipos, frame, imouse);
         color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
