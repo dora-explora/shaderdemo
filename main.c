@@ -5,7 +5,7 @@ int main(void) {
     InitWindow(1920, 1080, "Shader Demo");
 
     Shader shader = LoadShader(0, "./shader.fs");
-    
+
     float time = 0;
     int timeLoc = GetShaderLocation(shader, "time");
     float seed;
@@ -29,13 +29,13 @@ int main(void) {
         SetShaderValue(shader, seedLoc, &seed, SHADER_UNIFORM_FLOAT);
         mouse = GetMousePosition();
         SetShaderValue(shader, mouseLoc, &mouse, SHADER_UNIFORM_VEC2);
-        
+
         BeginDrawing();
 
         BeginShaderMode(shader);
         DrawTexture(bgTexture, 0, 0, WHITE);
         EndShaderMode();
-                    
+
         DrawFPS(10, 10);
         EndDrawing();
     }

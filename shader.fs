@@ -24,7 +24,7 @@ float sinrand(in float seed) {
     return fract(sin(seed) * 43758.5453);
 }
 
-bool brand (in float seed) {
+bool brand(in float seed) {
     if (rand(seed) < 0.5) {
         return true;
     } else {
@@ -42,8 +42,8 @@ const float SHAKE_STRENGTH = .006;
 const float RAIN_STRENGTH = .03;
 const float RAIN_CHANCE = 0.003;
 const int RAIN_LENGTH = 20;
-const int SPLATTER_DISTANCE = 20;
-const int SPLATTER_LENGTH = 2;
+const int SPLATTER_DISTANCE = 30;
+const int SPLATTER_LENGTH = 3;
 const int RAIN_SPEED = 20;
 const float MOUSE_RADIUS = 40.;
 const float LIGHTNING_PERIOD = 400.;
@@ -54,9 +54,9 @@ const float LIGHTNING_WALK_CHANCE = 0.3;
 vec2 shakerand(in float seed) { // random offset of pos for screen shake (outdated, probalby going to remove)
     vec2 shake;
     shake.y = rand(seed + 1.) * SHAKE_STRENGTH * (brand(seed + 1.) ? -1. : 1);
-    shake.y = float(int(shake.y * 1080.)) / 1080.; 
+    shake.y = float(int(shake.y * 1080.)) / 1080.;
     shake.x = rand(seed) * SHAKE_STRENGTH * (brand(seed) ? -1. : 1.);
-    shake.x = float(int(shake.x * 1920.)) / 1920.; 
+    shake.x = float(int(shake.x * 1920.)) / 1920.;
     return shake;
 }
 
@@ -66,21 +66,48 @@ int mouseheight(in int x, in ivec2 imouse) { // height of top of the mouse at so
 }
 
 int floorheight(in int x) { // height of the floor at some x position
-    if (x < 200) { 
+    if (x < 200) {
         return 1000;
-    } else if (x < 800) { 
-        return 1000 - int(smoothstep(0., 1., float(x - 200)/600.) * 200.); 
-    } else if (x < 1500) { 
+    } else if (x < 800) {
+        return 1000 - int(smoothstep(0., 1., float(x - 200)/600.) * 200.);
+    } else if (x < 1500) {
         return 800;
     } else if (x < 1600) {
         return 800 + 2 * (x - 1500);
-    } else { 
+    } else {
         return 1000;
     }
 }
 
-int height(in int x, in ivec2 imouse) { // height of the highest surface at some x position
-    int height = floorheight(x);
+int platformpos(in int frame) {
+    int aframe = frame % 1000; // "actual" frame, adjusted for period
+    if (aframe < 0) {
+        return 1000;
+    } else if (aframe < 200) {
+        return int(12 * sqrt(aframe + 1.)) + 988;
+    } else if (aframe < 267) {
+        return int(pow(float(aframe - 191), 2.) / 40.) + 1156;
+    } else if (aframe < 500) {
+        return 1300;
+    } else if (aframe < 700) {
+        return -int(12 * sqrt(aframe - 499.)) + 1311;
+    } else if (aframe < 767) {
+        return -int(pow(float(aframe - 691), 2.) / 40.) + 1144;
+    } else {
+        return 1000;
+    }
+}
+
+int platformheight(in int x, in int frame) {
+    int pos = platformpos(frame);
+    if (x < pos + 100 && x > pos - 100) {
+        return 500;
+    }
+    return 1080;
+}
+
+int height(in int x, in int frame, in ivec2 imouse) { // height of the highest surface at some x position
+    int height = min(floorheight(x), platformheight(x, frame));
     if (x < imouse.x + MOUSE_RADIUS && x > imouse.x - MOUSE_RADIUS) {
         int mouseheight = mouseheight(x, imouse);
         if (height > mouseheight) { return mouseheight; }
@@ -95,10 +122,10 @@ float angle(in int x, in ivec2 imouse) { // angle of the highest surface at some
     }
     if (x < 200) {
         return 0.;
-    } else if (x < 800) { 
+    } else if (x < 800) {
         float t = float(x - 200)/600.;
         return 90. - degrees(atan(1. / (6. * (t - t*t))));
-    } else if (x < 1500) { 
+    } else if (x < 1500) {
     return 0.;
     } else if (x < 1600) {
         return -60.;
@@ -138,11 +165,11 @@ bool rained(in int x, in int y, in int frame) { // whether a certain pixel has r
     return rainrand(x, seed);
 }
 
-bool splatterable(in ivec2 ipos, in ivec2 imouse) { // whether a certain pixel is in range of splatter
-    int height = height(ipos.x, imouse);
+bool splatterable(in ivec2 ipos, in ivec2 imouse, in int frame) { // whether a certain pixel is in range of splatter
+    int height = height(ipos.x, frame, imouse);
     if(ipos.y > height) { return false; }
     if (
-        ipos.x < imouse.x + MOUSE_RADIUS + SPLATTER_DISTANCE && 
+        ipos.x < imouse.x + MOUSE_RADIUS + SPLATTER_DISTANCE &&
         ipos.x > imouse.x - MOUSE_RADIUS - SPLATTER_DISTANCE &&
         ipos.y < imouse.y &&
         ipos.y > imouse.y - MOUSE_RADIUS - SPLATTER_DISTANCE
@@ -158,7 +185,7 @@ bool splatter(in ivec2 ipos, in int frame, in ivec2 imouse) { // whether a certa
 
         int x = ipos.x + i; // x position of unobscured droplet
 
-        int height = height(x, imouse); // floor height of unobscured droplet's column
+        int height = height(x, frame, imouse); // floor height of unobscured droplet's column
         if (distance(vec2(x, height), ipos) > SPLATTER_DISTANCE) { continue; } // if splatter would be too far, break
 
         ivec2 rotation = splatterrotation(x, imouse); // floor rotation of unobscured droplets' column (ivec2 of simple ratio)
@@ -183,7 +210,7 @@ bool splatter(in ivec2 ipos, in int frame, in ivec2 imouse) { // whether a certa
 }
 
 float rain(in ivec2 ipos, in int frame, in ivec2 imouse) { // strength of rain or splatter at a certain pixel on some frame
-    if (ipos.y > height(ipos.x, imouse)) {
+    if (ipos.y > height(ipos.x, frame, imouse)) {
         return 0.;
     }
 
@@ -193,7 +220,7 @@ float rain(in ivec2 ipos, in int frame, in ivec2 imouse) { // strength of rain o
         }
     }
 
-    if (splatterable(ipos, imouse)) {
+    if (splatterable(ipos, imouse, frame)) {
         for (int i = 0; i < SPLATTER_LENGTH; i++) {
             if (splatter(ipos, frame - i, imouse)) {
                 return float(SPLATTER_LENGTH + 1 - i)/3.;
@@ -234,26 +261,38 @@ bool lightwalk(in float inp) { // whether or not the lightning flips direction a
     }
 }
 
-bool lightbolt(in ivec2 ipos, in ivec2 imouse) { // strength of lightning bolt at a certain pixel this frame
+bool lightbolt(in ivec2 ipos, in ivec2 imouse, in int frame) { // strength of lightning bolt at a certain pixel and certain frame
     if (!lightrand(frame)) { return false; }
-    if (ipos.y >= imouse.y) { return false; }
-    int xoffset = abs(ipos.x - imouse.x);
-    int yoffset = abs(ipos.y - imouse.y);
-    if (xoffset > yoffset) { return false; }
-    int x = int(sinrand(seed) * 100 + imouse.x - 50);
-    int direction = 1;
-    for (int y = 0; y < ipos.y; y++) {
-        if (x - imouse.x == imouse.y - y) {
-            direction = -1;
-        } else if (imouse.x - x == imouse.y - y) {
-            direction = 1;
-        } else if (lightwalk(fract(seed + float(y) * 0.827634))) {
-            direction = direction == 1 ? -1 : 1;
+    int strikex = int(seed * 1920.);
+    int strikey = height(strikex, frame, imouse);
+    if (ipos.y >= strikey) { return false; }
+    for (int i = -2; i <= 2; i++) {
+        int xoffset = abs(ipos.x + i - strikex);
+        int yoffset = abs(ipos.y - strikey);
+        if (xoffset > yoffset) { return false; }
+        int x = int(sinrand(seed) * 100 + strikex - 50);
+        int direction = 1;
+        for (int y = 0; y < ipos.y; y++) {
+            if (x - strikex == strikey - y) {
+                direction = -1;
+            } else if (strikex - x == strikey - y) {
+                direction = 1;
+            } else if (lightwalk(fract(seed + float(y) * 0.827634))) {
+                direction = direction == 1 ? -1 : 1;
+            }
+            x += direction;
         }
-        x += direction;
+        if (ipos.x + i == x) { return true; }
     }
-    if (ipos.x == x) { return true; }
-    else { return false; }
+    return false;
+}
+
+float platformstrength(in ivec2 ipos, in int frame) {
+    int pos = platformpos(frame);
+    if (ipos.y < 500 && ipos.y > 450 && ipos.x < pos + 100 && ipos.x > pos - 100) {
+        return 1.;
+    }
+    return 0.;
 }
 
 void main() {
@@ -261,8 +300,8 @@ void main() {
 
     // pos += shakerand(seed); // screen shake
     // if (pos.y > 1. || pos.y < 0.) { // if pos.y is offscreen,
-        // color = vec4(0., 0., 0., 1.); // make the color black
-        // return;
+    //     color = vec4(0., 0., 0., 1.); // make the color black
+    //     return;
     // }
 
     ivec2 ipos = ivec2(pos.x * 1920., pos.y * 1080.);
@@ -272,24 +311,26 @@ void main() {
     color = texture(bg, pos);
 
     float mouse_strength = mousestrength(ipos, imouse);
+    float platform_strength = platformstrength(ipos, frame);
     if (mouse_strength > 0.) {
         color = mix(color, vec4(0.5, 0.3, 0.3, 1.), mouse_strength);
+    } else if (platform_strength > 0.) {
+        color = mix(color, vec4(0.2, 0.7, 0.6, 1.), platform_strength);
     } else {
         float rain_strength = rain(ipos, frame, imouse);
         color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
         float lightning_bg_strength = lightbg();
         color = mix(color, vec4(1.), lightning_bg_strength * LIGHTNING_BG_STRENGTH);
-        float lightning_bolt_strength = lightbolt(ipos, imouse) ? 1. : 0.;
-        color = mix(color, vec4(1., 1., 0.7, 1.), lightning_bolt_strength);
+        if (lightbolt(ipos, imouse, frame)) { color = vec4(1., 1., 0.8, 1.); }
     }
 
     // // for splatterable testing
-    // if (splatterable(ipos)) {
+    // if (splatterable(ipos, imouse)) {
     //     color = mix(color, vec4(1.), 0.2);
     // }
-    // for height() and angle() testing
+    // // for height() and angle() testing
     // if (ipos.y == height(ipos.x, imouse)) {
-    //     // color = vec4(1., 0., 0., 1.);
-    //     color = vec4(angle(ipos.x, imouse) / 90., -angle(ipos.x, imouse) / 90., 1., 1.);
+    //     color = vec4(1., 0., 0., 1.);
+    //     // color = vec4(angle(ipos.x, imouse) / 90., -angle(ipos.x, imouse) / 90., 1., 1.);
     // }
 }
