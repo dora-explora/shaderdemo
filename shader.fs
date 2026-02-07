@@ -115,7 +115,11 @@ int height(in int x, in int frame, in ivec2 imouse) { // height of the highest s
     return height;
 }
 
-float angle(in int x, in ivec2 imouse) { // angle of the highest surface at some x position
+float angle(in int x, in ivec2 imouse, in int frame) { // angle of the highest surface at some x position
+    int platformpos = platformpos(frame);
+    if (x < platformpos + 75 && x > platformpos - 75) {
+        return 0.;
+    }
     if (x < imouse.x + MOUSE_RADIUS && x > imouse.x - MOUSE_RADIUS) {
         int offset = x - imouse.x;
         return degrees(acos(float(offset) / MOUSE_RADIUS)) - 90.;
@@ -141,8 +145,8 @@ bool rainrand(in int x, in int seed) { // random chance for rain at some x and s
     return false;
 }
 
-ivec2 splatterrotation(in int x, in ivec2 imouse) { // slope of rain splatter as some x
-    float angle = angle(x, imouse);
+ivec2 splatterrotation(in int x, in ivec2 imouse, in int frame) { // slope of rain splatter as some x
+    float angle = angle(x, imouse, frame);
     if (angle < -30.) {
         return ivec2(1, 4);
     } else if (angle < -24.) {
@@ -188,7 +192,7 @@ bool splatter(in ivec2 ipos, in int frame, in ivec2 imouse) { // whether a certa
         int height = height(x, frame, imouse); // floor height of unobscured droplet's column
         if (distance(vec2(x, height), ipos) > SPLATTER_DISTANCE) { continue; } // if splatter would be too far, break
 
-        ivec2 rotation = splatterrotation(x, imouse); // floor rotation of unobscured droplets' column (ivec2 of simple ratio)
+        ivec2 rotation = splatterrotation(x, imouse, frame); // floor rotation of unobscured droplets' column (ivec2 of simple ratio)
         int numerator;
         int denominator;
         if (i < 0) {
