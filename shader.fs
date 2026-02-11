@@ -50,8 +50,9 @@ const int RAIN_SPEED = 20;
 const float MOUSE_RADIUS = 40.;
 const float LIGHTNING_PERIOD = 400.;
 const int LIGHTNING_DECAY = 15;
-const float LIGHTNING_BG_STRENGTH = 0.2;
+const float LIGHTNING_BG_STRENGTH = 0.3;
 const float LIGHTNING_WALK_CHANCE = 0.3;
+const float FIRE_CHANCE = 0.05;
 
 vec2 shakerand(in float seed) { // random offset of pos for screen shake (outdated, probalby going to remove)
     vec2 shake;
@@ -106,8 +107,17 @@ int platformheight(in int x, in int frame) {
     return 1080;
 }
 
+int fireheight(in int x) {
+    if (x > 1035 || x < 965) { return 1080; }
+    int offset = abs(x - 1000) / 2;
+    if (offset < 13) { return 780 - offset; }
+    else { return 756 + offset; }
+}
+
 int height(in int x, in int frame, in ivec2 imouse) { // height of the highest surface at some x position
-    int height = min(floorheight(x), platformheight(x, frame));
+    int height = floorheight(x);
+    height = min(height, platformheight(x, frame));
+    height = min(height, fireheight(x));
     if (x < imouse.x + MOUSE_RADIUS && x > imouse.x - MOUSE_RADIUS) {
         int mouseheight = mouseheight(x, imouse);
         if (height > mouseheight) { return mouseheight; }
@@ -123,6 +133,14 @@ float angle(in int x, in ivec2 imouse, in int frame) { // angle of the highest s
     if (x < imouse.x + MOUSE_RADIUS && x > imouse.x - MOUSE_RADIUS) {
         int offset = x - imouse.x;
         return degrees(acos(float(offset) / MOUSE_RADIUS)) - 90.;
+    }
+    if (x < 1035 && x > 965) {
+        int offset = x - 1000;
+        if (offset > 25) { return -30.; }
+        if (offset < -25) { return 30.; }
+        if (offset > 0) { return 30.; }
+        if (offset < 0) { return -30.; }
+        return 0.;
     }
     if (x < 200) {
         return 0.;
@@ -333,6 +351,57 @@ vec4 platformcolor(in ivec2 ipos, in int frame) {
     return texture(platform, vec2(x, y));
 }
 
+bool fireable(in ivec2 ipos, in ivec2 imouse) {
+    if (ipos.x < 975 || ipos.x > 1025) { return false; }
+    int offset = abs(ipos.x - 1000) / 2;
+    if (ipos.y - offset < 680 || ipos.y + offset > 780) { return false; }
+    if (distance(ipos, imouse) < MOUSE_RADIUS) { return false; }
+    int direction = (ipos.x < 1000) ? -25 : 25;
+    if ((780 - offset - ipos.y)/10 > abs(ipos.x - 1000 - direction)) { return false; }
+    return true;
+}
+
+bool firerand(in ivec2 ipos, in int frame) {
+    float x = fmod(ipos.x / 63.9263, 928.374);
+    float y = fmod(ipos.y / 987.812746, 627.67231);
+    float f = fmod(frame * 1.23688, 38.8364);
+    float fseed = (x + y + f) * 2.26371;
+    if (rand(sinrand(fseed) + 0.5) < FIRE_CHANCE) { return true; }
+    else { return false; }
+}
+
+vec4 fire(in ivec2 ipos, in ivec2 imouse, in int frame) {
+    if (fireable(ipos, imouse)) {
+        int offset = abs(ipos.x - 1000) / 2;
+        int oy = 780 - offset;
+        int diagonal = (oy - ipos.y)/10;
+        if (ipos.x < 1000) { diagonal = -diagonal; }
+        int ox = ipos.x + diagonal;
+        int of = oy - ipos.y - frame * 2;
+        if (firerand(ivec2(ox, oy), of)) {
+            float x = fmod(ipos.x / 637.9263, 517.2673);
+            float y = fmod(ipos.y / 987.812746, 725.2987);
+            float fseed = seed + x + y;
+            float height = float(780 - ipos.y) / 150.;
+            float g = sinrand(fseed * 1926.26371) * 0.4 + 0.6 - height;
+            bool gray = false;
+            if (ipos.x < platformpos(frame) - 75) {
+                if (ipos.x < imouse.x + MOUSE_RADIUS && ipos.x > imouse.x - MOUSE_RADIUS) {
+                    gray = false;
+                } else {
+                    gray = true;
+                }
+            }
+            if (gray) {
+                return vec4(1., 1., 1., g);
+            } else {
+                return vec4(1., g, 0., 1.);
+            }
+        }
+    }
+    return vec4(0.);
+}
+
 void main() {
     vec2 pos = fragTexCoord;
 
@@ -355,6 +424,8 @@ void main() {
     } else if (platform_strength > 0.) {
         color = platformcolor(ipos, frame);
     } else {
+        vec4 fire = fire(ipos, imouse, frame);
+        color = mix(color, fire, fire.a);
         float rain_strength = rain(ipos, frame, imouse);
         color = mix(color, vec4(0.6, 0.8, 1., 1.), rain_strength);
         float lightning_bg_strength = lightbg();
@@ -369,6 +440,6 @@ void main() {
     // // for height() and angle() testing
     // if (ipos.y == height(ipos.x, imouse)) {
     //     color = vec4(1., 0., 0., 1.);
-    //     // color = vec4(angle(ipos.x, imouse) / 90., -angle(ipos.x, imouse) / 90., 1., 1.);
+    //     // color = vec4(angle(ipos.x, imouse, frame) / 90., -angle(ipos.x, imouse, frame) / 90., 1., 1.);
     // }
 }

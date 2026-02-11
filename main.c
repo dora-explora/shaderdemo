@@ -2,6 +2,7 @@
 #include <stdlib.h>
 
 int main(void) {
+    SetTraceLogLevel(LOG_WARNING);
     InitWindow(1920, 1080, "Shader Demo");
 
     Shader shader = LoadShader(0, "./shader.fs");
