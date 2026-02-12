@@ -5,15 +5,12 @@ in vec4 fragColor;
 
 out vec4 color;
 
-uniform float time;
-uniform float seed;
 uniform int frame;
 uniform vec2 mouse;
 
 uniform sampler2D bg;
 uniform sampler2D rock;
 uniform sampler2D platform;
-uniform int heights[1920];
 
 float rand(in float seed) {
     seed = fract(seed * 443.897);
@@ -40,7 +37,6 @@ float fmod(in float n, in float m) {
     return x;
 }
 
-const float SHAKE_STRENGTH = .006;
 const float RAIN_STRENGTH = .03;
 const float RAIN_CHANCE = 0.003;
 const int RAIN_LENGTH = 20;
@@ -54,14 +50,6 @@ const float LIGHTNING_BG_STRENGTH = 0.3;
 const float LIGHTNING_WALK_CHANCE = 0.3;
 const float FIRE_CHANCE = 0.05;
 
-vec2 shakerand(in float seed) { // random offset of pos for screen shake (outdated, probalby going to remove)
-    vec2 shake;
-    shake.y = rand(seed + 1.) * SHAKE_STRENGTH * (brand(seed + 1.) ? -1. : 1);
-    shake.y = float(int(shake.y * 1080.)) / 1080.;
-    shake.x = rand(seed) * SHAKE_STRENGTH * (brand(seed) ? -1. : 1.);
-    shake.x = float(int(shake.x * 1920.)) / 1920.;
-    return shake;
-}
 
 int mouseheight(in int x, in ivec2 imouse) { // height of top of the mouse at some x position
     int offset = x - imouse.x;
@@ -291,21 +279,21 @@ bool lightwalk(in float inp) { // whether or not the lightning flips direction a
 
 bool lightbolt(in ivec2 ipos, in ivec2 imouse, in int frame) { // strength of lightning bolt at a certain pixel and certain frame
     if (!lightrand(frame)) { return false; }
-    int strikex = int(seed * 1920.);
+    int strikex = int(rand(fract(frame * 0.6712357)) * 1920.);
     int strikey = height(strikex, frame, imouse);
     if (ipos.y >= strikey) { return false; }
     for (int i = -2; i <= 2; i++) {
         int xoffset = abs(ipos.x + i - strikex);
         int yoffset = abs(ipos.y - strikey);
         if (xoffset > yoffset) { return false; }
-        int x = int(sinrand(seed) * 100 + strikex - 50);
+        int x = int(sinrand(frame * 0.5631287) * 100 + strikex - 50);
         int direction = 1;
         for (int y = 0; y < ipos.y; y++) {
             if (x - strikex == strikey - y) {
                 direction = -1;
             } else if (strikex - x == strikey - y) {
                 direction = 1;
-            } else if (lightwalk(fract(seed + float(y) * 0.827634))) {
+            } else if (lightwalk(fract(frame * 0.165423654 + float(y) * 0.827634))) {
                 direction = direction == 1 ? -1 : 1;
             }
             x += direction;
@@ -385,9 +373,9 @@ vec4 fire(in ivec2 ipos, in ivec2 imouse, in int frame) {
         if (firerand(ivec2(ox, oy), of)) {
             float x = fmod(ipos.x / 637.9263, 517.2673);
             float y = fmod(ipos.y / 987.812746, 725.2987);
-            float fseed = seed + x + y;
+            float fseed = frame + x + y;
             float height = float(780 - ipos.y) / 150.;
-            float g = sinrand(fseed * 1926.26371) * 0.4 + 0.6 - height;
+            float g = sinrand(fseed * 16.26371) * 0.4 + 0.6 - height;
             bool gray = false;
             if (ipos.x < platformpos(frame) - 75) {
                 if (ipos.x < imouse.x + MOUSE_RADIUS && ipos.x > imouse.x - MOUSE_RADIUS) {
