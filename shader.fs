@@ -354,7 +354,11 @@ vec4 platformcolor(in ivec2 ipos, in int frame) {
 bool fireable(in ivec2 ipos, in ivec2 imouse) {
     if (ipos.x < 975 || ipos.x > 1025) { return false; }
     int offset = abs(ipos.x - 1000) / 2;
-    if (ipos.y - offset < 680 || ipos.y + offset > 780) { return false; }
+    if (ipos.y + offset > 780) { return false; }
+    float x = (ipos.x - 1000);
+    float aframe = 0.85 - (1 + sin(frame * 0.05)) * 0.15;
+    float top = .5 * cos(x / 16.) + .2 * cos(x / 8.) + aframe * cos(x / 4.) + 0.8;
+    if (ipos.y < 750 - int(50. * top)) { return false; }
     if (distance(ipos, imouse) < MOUSE_RADIUS) { return false; }
     int direction = (ipos.x < 1000) ? -25 : 25;
     if ((780 - offset - ipos.y)/10 > abs(ipos.x - 1000 - direction)) { return false; }
