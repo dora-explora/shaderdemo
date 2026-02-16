@@ -8,10 +8,15 @@ It's a 1920x1080 demo scene with rain, lightning, fire, smoke, and more!
 
 If you're on x64 Linux, there's an archive with a binary and assets available in the latest release.
 
+
 Otherwise, install Raylib from their [GitHub](https://github.com/raysan5/raylib/releases/latest) or their [website](https://raylib.com).
+
 Then, clone the repository by clicking Code and downloading then extracting the .zip, by running `git clone https://github.com/dora-explora/shaderdemo.git`, or by running `gh repo clone dora-explora/shaderdemo` if you have the GitHub CLI.
+
 Then, install a C compiler. [GNU Make](https://www.gnu.org/software/make/) is already supported, and it can be installed through [MinGW](https://www.mingw-w64.org/) on Windows, or [XCode command line tools](https://developer.apple.com/documentation/xcode/installing-the-command-line-tools) or [Homebrew](https://brew.sh/) on MacOS. You can also use any other C compiler, like [Visual Studio's build tools](https://learn.microsoft.com/en-us/cpp/build/walkthrough-compile-a-c-program-on-the-command-line?view=msvc-170).
+
 With Make, run `make run` in the folder to begin. Otherwise, compile the code with raylib included as a library and run the executable (usually build/shaderdemo) to begin.
+
 
 Once you're in, move the mouse around and see the rain interact with it!
 
